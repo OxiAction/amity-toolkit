@@ -1,0 +1,14 @@
+package-as: Amity
+
+enable-nolib-creation: no
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - .github
+  - curseforge
+  - tools
+  - README.md
+  - "*.iml"

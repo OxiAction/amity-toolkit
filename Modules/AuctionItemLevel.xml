@@ -1,0 +1,19 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\..\Blizzard_SharedXML\UI.xsd">
+	<!--
+		Table cell used for the item level column of the auction house browse list.
+		Deliberately inherits no Blizzard_AuctionHouseUI template so this file can
+		load before that (load-on-demand) addon does; the font object is set in Lua.
+	-->
+	<Frame name="AmityAuctionItemLevelCellTemplate" mixin="AmityAuctionItemLevelCellMixin" virtual="true">
+		<Size x="0" y="16"/>
+		<Layers>
+			<Layer level="BACKGROUND">
+				<FontString parentKey="Text" inherits="GameFontHighlight" justifyH="LEFT" setAllPoints="true"/>
+			</Layer>
+		</Layers>
+		<Scripts>
+			<OnEvent method="OnEvent"/>
+			<OnHide method="OnHide"/>
+		</Scripts>
+	</Frame>
+</Ui>
