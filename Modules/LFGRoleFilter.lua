@@ -204,7 +204,13 @@ local function CreateUI()
 		b.Icon:SetAtlas(role.atlas, false)
 
 		b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-		b:SetCheckedTexture("Interface\\Buttons\\CheckButtonHilight", "ADD")
+		-- SetCheckedTexture takes no blend mode: passing a file draws its black
+		-- background over the icon. Build the glow as an additive texture instead.
+		local checked = b:CreateTexture(nil, "OVERLAY")
+		checked:SetAllPoints(b)
+		checked:SetTexture("Interface\\Buttons\\CheckButtonHilight")
+		checked:SetBlendMode("ADD")
+		b:SetCheckedTexture(checked)
 
 		b:SetChecked(db[role.key] and true or false)
 		UpdateButtonLook(b)
