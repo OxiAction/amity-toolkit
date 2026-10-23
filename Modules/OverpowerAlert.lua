@@ -1,8 +1,9 @@
 --[[
-	Amity module: Overpower Alert (formerly the OverpowerAlert addon)
-	==================================================================
+	Amity module: Overpower Alert
+	=============================
 	Warriors only: shows a movable Overpower icon with a 5 second countdown
-	when the target dodges.
+	when the target dodges. The module's Unavailable check makes the core
+	skip it entirely on other classes: no frame, no events.
 
 	WoW Forever: CombatLogGetCurrentEventInfo is restricted to the secure
 	Blizzard environment (ADDON_ACTION_FORBIDDEN for addons), so the module
@@ -17,16 +18,34 @@ local OVERPOWER_ID = 7384 -- Overpower (Rank 1); all ranks share the name/icon
 local OVERPOWER_IDS = { [7384] = true, [7887] = true, [11584] = true, [11585] = true }
 
 local M = Amity:RegisterModule("overpower", {
-	title    = "Overpower Alert",
-	notes    = "Warriors: movable Overpower icon with a 5s countdown when your target dodges.",
-	defaults = { sound = true },
-	slash    = { "/opa", "/overpoweralert" },
+	title       = "Overpower Alert - Warrior",
+	notes       = "Warriors only: movable Overpower icon with a 5s countdown when your target dodges.",
+	description = "Warriors only. When your target dodges, a large Overpower icon appears with a 5 second countdown. "
+		.. "It disappears when you use Overpower or leave combat. Unlock the icon to drag it "
+		.. "where you want it.",
+	defaults    = { sound = "RAID_WARNING" }, -- a SOUNDKIT name, or "NONE"
 })
 
 local db -- AmityDB.overpower
-local f  -- the alert frame, created in Init for warriors only
+local f  -- the alert frame, created in Init (warriors only)
 
-local function Print(msg) Amity.Print(msg, M.title) end
+-- Sounds to pick from, by SOUNDKIT name. Only the ones this client has are offered.
+local SOUNDS = {
+	{ "RAID_WARNING",                 "Raid warning" },
+	{ "UI_RAID_BOSS_WHISPER_WARNING", "Boss warning" },
+	{ "READY_CHECK",                  "Ready check" },
+	{ "PVP_THROUGH_QUEUE",            "Queue ready" },
+	{ "ALARM_CLOCK_WARNING_2",        "Alarm clock" },
+	{ "ALARM_CLOCK_WARNING_3",        "Alarm bell" },
+	{ "UI_BATTLEGROUND_COUNTDOWN_TIMER",    "Countdown tick" },
+	{ "UI_BATTLEGROUND_COUNTDOWN_FINISHED", "Countdown end" },
+	{ "LFG_ROLE_CHECK",               "Role check" },
+}
+
+local function PlayAlertSound()
+	local id = SOUNDKIT and SOUNDKIT[db.sound]
+	if id then PlaySound(id, "Master") end
+end
 
 local function GetOverpowerTexture()
 	local tex
@@ -51,7 +70,8 @@ local function ApplyPosition()
 	end
 end
 
-local function SetTestMode(on)
+-- Unlocked: the icon stays visible and can be dragged.
+local function SetUnlocked(on)
 	f.unlocked = on
 	f:EnableMouse(on)
 	f.border:SetShown(on)
@@ -61,11 +81,10 @@ local function SetTestMode(on)
 		f.icon:SetTexture(GetOverpowerTexture())
 		f.text:SetText("5.0")
 		f:Show()
-		Print("test mode ON - drag the icon, then /opa lock")
 	else
 		f:Hide()
-		Print("test mode OFF, position saved")
 	end
+	Amity:UpdatePanel()
 end
 
 local function Trigger()
@@ -73,9 +92,7 @@ local function Trigger()
 	f.expires = GetTime() + DURATION
 	f.icon:SetTexture(GetOverpowerTexture())
 	f:Show()
-	if db.sound then
-		PlaySound(SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959, "Master")
-	end
+	PlayAlertSound()
 end
 
 local function Cancel()
@@ -96,6 +113,9 @@ local function CreateAlertFrame()
 		local point, _, relPoint, x, y = self:GetPoint()
 		db.pos = { point, relPoint, x, y }
 	end)
+	f:SetScript("OnMouseUp", function(self, button)
+		if button == "RightButton" and self.unlocked then SetUnlocked(false) end
+	end)
 	f:Hide()
 
 	f.icon = f:CreateTexture(nil, "ARTWORK")
@@ -114,7 +134,7 @@ local function CreateAlertFrame()
 
 	f.label = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 	f.label:SetPoint("TOP", f, "BOTTOM", 0, -2)
-	f.label:SetText("Drag to move  |  /opa lock to finish")
+	f.label:SetText("Drag to move  |  right-click to lock")
 	f.label:Hide()
 
 	f:SetScript("OnUpdate", function(self)
@@ -170,9 +190,6 @@ local function OnEvent(self, event, arg1, arg2, arg3)
 end
 
 local function Setup()
-	local _, class = UnitClass("player")
-	if class ~= "WARRIOR" then return end
-
 	CreateAlertFrame()
 	ApplyPosition()
 	f:SetScript("OnEvent", OnEvent)
@@ -185,43 +202,46 @@ end
 
 function M:Init(settings)
 	db = settings
-	-- the player's class is only reliable from PLAYER_LOGIN on
-	if IsLoggedIn() then
-		Setup()
-	else
-		local loader = CreateFrame("Frame")
-		loader:RegisterEvent("PLAYER_LOGIN")
-		loader:SetScript("OnEvent", function(self)
-			self:UnregisterEvent("PLAYER_LOGIN")
-			Setup()
-		end)
+	-- a sound that is not in the list goes back to the default
+	local known = db.sound == "NONE"
+	for _, entry in ipairs(SOUNDS) do
+		if entry[1] == db.sound then known = true end
 	end
+	if not known then db.sound = "RAID_WARNING" end
+	-- Only called for warriors, at PLAYER_LOGIN (see M:Unavailable).
+	Setup()
 end
 
 -------------------------------------------------------------------------------
--- Slash command
+-- Panel options
 -------------------------------------------------------------------------------
 
-function M:Slash(msg)
-	if not f then Print("warriors only.") return end
-	local cmd, arg = msg:match("^(%S*)%s*(%S*)$")
-	cmd = (cmd or ""):lower()
-	if cmd == "unlock" or cmd == "test" or cmd == "" then
-		SetTestMode(not f.unlocked)
-	elseif cmd == "lock" then
-		SetTestMode(false)
-	elseif cmd == "proc" then
-		f.expires = nil
-		Trigger()
-	elseif cmd == "reset" then
-		db.pos = nil
-		ApplyPosition()
-		Print("position reset")
-	elseif cmd == "sound" then
-		arg = (arg or ""):lower()
-		if arg == "on" then db.sound = true elseif arg == "off" then db.sound = false end
-		Print("sound " .. (db.sound and "on" or "off"))
-	else
-		Print("/opa test (toggle position mode) | lock | proc (simulate) | reset | sound on|off")
-	end
+function M:Unavailable()
+	local _, class = UnitClass("player")
+	if class ~= "WARRIOR" then return "Warriors only: this character is not a warrior." end
+end
+
+M.options = {
+	{ type = "select", key = "sound", label = "Sound when the alert appears",
+		tooltip = "Picking a sound plays it once so you can hear it.",
+		values = (function()
+			local values = { { "NONE", "No sound" } }
+			for _, entry in ipairs(SOUNDS) do
+				if SOUNDKIT and SOUNDKIT[entry[1]] then values[#values + 1] = entry end
+			end
+			return values
+		end)() },
+	{ type = "button", label = function() return (f and f.unlocked) and "Lock icon" or "Unlock icon" end,
+		tooltip = "Unlocked, the icon stays visible and can be dragged. Right-click it to lock.",
+		onClick = function() SetUnlocked(not f.unlocked) end },
+	{ type = "button", label = "Test alert",
+		tooltip = "Shows the alert as if your target had dodged.",
+		disabled = function() return f and f.unlocked end,
+		onClick = function() f.expires = nil; Trigger() end },
+	{ type = "button", label = "Reset position",
+		onClick = function() db.pos = nil; ApplyPosition() end },
+}
+
+function M:OnOptionChanged(key)
+	if key == "sound" then PlayAlertSound() end -- preview
 end

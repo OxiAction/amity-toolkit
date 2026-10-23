@@ -1,12 +1,14 @@
 --[[
-	Amity module: Bar Text (formerly the AlwaysBarText addon)
-	==========================================================
+	Amity module: Bar Text
+	======================
 	Permanently shows the health / resource text on the player frame, the
-	target frame and the target-of-target frame, formatted as
+	target frame and the target-of-target frame, in one of three formats:
 
-		100/200 50%
+		100/200 50%    current / maximum and percent (default)
+		100/200        current / maximum
+		50%            percent
 
-	(current / maximum and percent) for both health and the unit's resource.
+	for both health and the unit's resource.
 
 	Design notes (important for WoW Forever / the 12.x engine)
 	----------------------------------------------------------
@@ -22,36 +24,31 @@
 	  UnitHealthPercent / UnitPowerPercent with a 0-100 curve, which is the
 	  sanctioned way to get a displayable percentage out of a secret value.
 	* Blizzard's own status text cannot produce "cur/max pct%" (its "Both"
-	  option draws "50%" left and "100" right). While our format is on we turn
-	  the "statusText" CVar off and set the alpha of Blizzard's text strings to
-	  0 so the mouse-over text does not overlap ours. SetAlpha is a plain
-	  widget method and does not taint anything.
-	* With "/abt percent off" everything falls back to the previous behaviour:
-	  Blizzard's CVar-driven text on player / target, and our target-of-target
-	  text mirrors the Options > Interface > Status Text format.
+	  option draws "50%" left and "100" right), so the module always draws its
+	  own text. It turns the "statusText" CVar off and sets the alpha of
+	  Blizzard's text strings to 0 so the mouse-over text does not overlap
+	  ours. SetAlpha is a plain widget method and does not taint anything.
 ]]
 
 local _, Amity = ...
 
 local defaults = {
-	main     = true,   -- player / target bar text
-	percent  = true,   -- "cur/max pct%" format drawn by us (false = Blizzard's CVar format)
+	format   = "full", -- "full" = "cur/max pct%", "numeric" = "cur/max", "percent" = "pct%"
 	mainSize = 0,      -- font size for the player / target text; 0 = template default
 	tot      = true,   -- target-of-target health + resource text
 	totSize  = 9,      -- font size for the target-of-target text (bars are tiny)
-	totMax   = true,   -- include the max value on the target-of-target; false = "cur pct%"
 }
 
 local M = Amity:RegisterModule("bartext", {
-	title    = "Bar Text",
-	notes    = "Always shows health / resource text as \"100/200 50%\" on player, target and target-of-target.",
-	defaults = defaults,
-	slash    = { "/abt", "/alwaysbartext" },
+	title       = "Bar Text",
+	notes       = "Always shows health / resource text, like \"100/200 50%\", on player, target and target-of-target.",
+	description = "Health and resource values stay visible on the player, target and target-of-target frames, "
+		.. "without hovering. Pick how they read: \"100/200 50%\" (current / maximum and percent), "
+		.. "\"100/200\" or \"50%\".",
+	defaults    = defaults,
 })
 
 local db -- AmityDB.bartext
-
-local function Print(msg) Amity.Print(msg, M.title) end
 
 -------------------------------------------------------------------------------
 -- Secret-safe text helpers
@@ -79,13 +76,8 @@ end
 -- All of these take possibly-secret numbers and only ever hand them to
 -- SetFormattedText, which accepts secrets. Every call is guarded so a client
 -- rule change can never produce a Lua error popup; we just show nothing.
-local function SetNumeric(fs, cur, max, showMax)
-	local ok
-	if showMax then
-		ok = pcall(fs.SetFormattedText, fs, "%d / %d", cur, max)
-	else
-		ok = pcall(fs.SetFormattedText, fs, "%d", cur)
-	end
+local function SetNumeric(fs, cur, max)
+	local ok = pcall(fs.SetFormattedText, fs, "%d/%d", cur, max)
 	if not ok then fs:SetText("") end
 	fs:SetShown(ok)
 end
@@ -96,21 +88,13 @@ local function SetPercent(fs, pct)
 	fs:SetShown(ok)
 end
 
--- "100/200 50%" (or "100 50%" without the max). Falls back to the plain
--- numbers when no percent is available.
-local function SetFull(fs, cur, max, pct, showMax)
-	local ok = false
-	if pct ~= nil then
-		if showMax then
-			ok = pcall(fs.SetFormattedText, fs, "%d/%d %d%%", cur, max, pct)
-		else
-			ok = pcall(fs.SetFormattedText, fs, "%d %d%%", cur, pct)
-		end
-	end
+-- "100/200 50%". Falls back to the plain numbers when no percent is available.
+local function SetFull(fs, cur, max, pct)
+	local ok = pct ~= nil and pcall(fs.SetFormattedText, fs, "%d/%d %d%%", cur, max, pct)
 	if ok then
 		fs:Show()
 	else
-		SetNumeric(fs, cur, max, showMax)
+		SetNumeric(fs, cur, max)
 	end
 end
 
@@ -165,25 +149,14 @@ local function ApplyFontSize(fs, size)
 	end
 end
 
-local function HideSet(w)
-	w.text:Hide(); w.left:Hide(); w.right:Hide()
-end
-
--- mode: "FULL" (our cur/max pct% format) or a statusTextDisplay CVar value
-local function UpdateSet(w, cur, max, pct, mode, showMax)
-	if mode == "FULL" then
-		w.left:Hide(); w.right:Hide()
-		SetFull(w.text, cur, max, pct, showMax)
-	elseif mode == "PERCENT" then
-		w.left:Hide(); w.right:Hide()
-		SetPercent(w.text, pct)
-	elseif mode == "BOTH" then
-		w.text:Hide()
-		SetPercent(w.left, pct)
-		SetNumeric(w.right, cur, max, false)
-	else -- NUMERIC / NONE / anything else
-		w.left:Hide(); w.right:Hide()
-		SetNumeric(w.text, cur, max, showMax)
+-- format: db.format ("full", "numeric" or "percent")
+local function UpdateText(fs, cur, max, pct, format)
+	if format == "percent" then
+		SetPercent(fs, pct)
+	elseif format == "numeric" then
+		SetNumeric(fs, cur, max)
+	else
+		SetFull(fs, cur, max, pct)
 	end
 end
 
@@ -193,9 +166,9 @@ end
 		key       = "player" | "target" | "tot",
 		getUnit   = function() -> unit token,
 		overlay   = our frame,
-		health    = { text, left, right },
-		mana      = { text, left, right },
-		blizzText = { Blizzard font strings we fade out while our format is on },
+		health    = font string on the health bar,
+		mana      = font string on the resource bar,
+		blizzText = { Blizzard font strings we fade out },
 	}
 ]]
 local unitSets = {}
@@ -203,36 +176,29 @@ local unitSets = {}
 local function UpdateUnitSet(set)
 	local unit = set.getUnit()
 	if not unit or not UnitExists(unit) then
-		HideSet(set.health); HideSet(set.mana)
+		set.health:Hide(); set.mana:Hide()
 		return
 	end
 
 	-- Dead units: step aside for the frame's own "DEAD" label.
 	local okDead, dead = pcall(function() return UnitIsDeadOrGhost(unit) == true end)
 	if okDead and dead then
-		HideSet(set.health); HideSet(set.mana)
+		set.health:Hide(); set.mana:Hide()
 		return
 	end
 
-	local mode
-	if db.percent then
-		mode = "FULL"
-	else
-		mode = GetCVar("statusTextDisplay") or "NUMERIC"
-	end
-	local showMax = (set.key ~= "tot") or db.totMax
 	local curve = GetPctCurve()
 
 	-- Health
 	local hp, hpMax = UnitHealth(unit), UnitHealthMax(unit)
-	UpdateSet(set.health, hp, hpMax, GetHealthPercent(unit, curve), mode, showMax)
+	UpdateText(set.health, hp, hpMax, GetHealthPercent(unit, curve), db.format)
 
 	-- Power (whatever the unit's displayed power is)
 	local pw, pwMax = UnitPower(unit), UnitPowerMax(unit)
 	if IsZero(pwMax) then
-		HideSet(set.mana)
+		set.mana:Hide()
 	else
-		UpdateSet(set.mana, pw, pwMax, GetPowerPercent(unit, curve), mode, showMax)
+		UpdateText(set.mana, pw, pwMax, GetPowerPercent(unit, curve), db.format)
 	end
 end
 
@@ -252,16 +218,8 @@ local function CreateUnitSet(key, parentFrame, healthBar, manaBar, getUnit)
 		key     = key,
 		getUnit = getUnit,
 		overlay = overlay,
-		health  = {
-			text  = CreateText(overlay, healthBar, "CENTER", 0, "CENTER"),
-			left  = CreateText(overlay, healthBar, "LEFT",   2, "LEFT"),
-			right = CreateText(overlay, healthBar, "RIGHT", -2, "RIGHT"),
-		},
-		mana = {
-			text  = CreateText(overlay, manaBar, "CENTER", 0, "CENTER"),
-			left  = CreateText(overlay, manaBar, "LEFT",   2, "LEFT"),
-			right = CreateText(overlay, manaBar, "RIGHT", -2, "RIGHT"),
-		},
+		health  = CreateText(overlay, healthBar, "CENTER", 0, "CENTER"),
+		mana    = CreateText(overlay, manaBar,   "CENTER", 0, "CENTER"),
 		blizzText = {},
 	}
 	CollectBlizzardTexts(set.blizzText, healthBar)
@@ -274,11 +232,8 @@ local function CreateUnitSet(key, parentFrame, healthBar, manaBar, getUnit)
 end
 
 local function SetFontSizes(set, size)
-	for _, w in ipairs({ set.health, set.mana }) do
-		ApplyFontSize(w.text,  size)
-		ApplyFontSize(w.left,  size)
-		ApplyFontSize(w.right, size)
-	end
+	ApplyFontSize(set.health, size)
+	ApplyFontSize(set.mana, size)
 end
 
 local function SetBlizzardTextAlpha(set, alpha)
@@ -320,47 +275,19 @@ end
 
 local function ApplyMain()
 	SetupMain()
-	local useOwn = db.main and db.percent
-
 	for _, key in ipairs({ "player", "target" }) do
 		local set = unitSets[key]
 		if set then
-			SetBlizzardTextAlpha(set, useOwn and 0 or 1)
+			SetBlizzardTextAlpha(set, 0)
 			SetFontSizes(set, db.mainSize)
-			if useOwn then
-				set.overlay:Show()
-				UpdateUnitSet(set)
-			else
-				set.overlay:Hide()
-			end
+			set.overlay:Show()
+			UpdateUnitSet(set)
 		end
 	end
-
-	if not db.main then
-		return
+	-- Our text replaces Blizzard's; no need for the always-on CVar.
+	if GetCVar("statusText") ~= "0" then
+		SetCVar("statusText", "0")
 	end
-
-	if useOwn then
-		-- Our text replaces Blizzard's; no need for the always-on CVar.
-		if GetCVar("statusText") ~= "0" then
-			SetCVar("statusText", "0")
-		end
-	else
-		-- Blizzard's own "always show status text": statusText = "1" keeps the
-		-- text visible; statusTextDisplay picks the format (NUMERIC / PERCENT /
-		-- BOTH). "NONE" shows numbers anyway, but set it to NUMERIC so the
-		-- options panel reflects what is on screen.
-		if GetCVar("statusText") ~= "1" then
-			SetCVar("statusText", "1")
-		end
-		if GetCVar("statusTextDisplay") == "NONE" then
-			SetCVar("statusTextDisplay", "NUMERIC")
-		end
-	end
-end
-
-local function DisableMain()
-	SetCVar("statusText", "0")
 end
 
 -------------------------------------------------------------------------------
@@ -423,82 +350,23 @@ local function UpdateShownSets(...)
 end
 
 -------------------------------------------------------------------------------
--- Slash commands
+-- Panel options
 -------------------------------------------------------------------------------
 
-local OnOff, ParseBool = Amity.OnOff, Amity.ParseBool
+M.options = {
+	{ type = "select", key = "format", label = "Text format",
+		values = {
+			{ "full",    "100/200 50%  (current/max and percent)" },
+			{ "numeric", "100/200  (current/max)" },
+			{ "percent", "50%  (percent)" },
+		} },
+	{ type = "range", key = "mainSize", label = "Player and target font size", min = 6, max = 20, zero = "Default" },
+	{ type = "toggle", key = "tot", label = "Target-of-target text" },
+	{ type = "range", key = "totSize", label = "Target-of-target font size", min = 6, max = 16 },
+	{ type = "button", label = "Restore defaults", onClick = function(self) Amity:ResetModuleSettings(self) end },
+}
 
-local function ShowStatus()
-	local fmt
-	if db.percent then
-		fmt = "cur/max pct%"
-	else
-		fmt = "Blizzard (" .. tostring(GetCVar("statusTextDisplay")) .. ")"
-	end
-	Print(("player/target %s (size %s), target-of-target %s (size %d, max value %s), format: %s"):format(
-		OnOff(db.main), db.mainSize > 0 and tostring(db.mainSize) or "default",
-		OnOff(db.tot), db.totSize, OnOff(db.totMax), fmt))
-end
-
-local function ShowHelp()
-	Print("commands:")
-	Print("  /abt main on|off        - always show player + target bar text")
-	Print("  /abt percent on|off     - '100/200 50%' format (off = Blizzard's Status Text format)")
-	Print("  /abt mainsize <0|6-20>  - player + target font size (0 = default)")
-	Print("  /abt tot on|off         - target-of-target text")
-	Print("  /abt totsize <6-16>     - target-of-target font size")
-	Print("  /abt totmax on|off      - target-of-target shows 'cur/max' (on) or 'cur' (off)")
-	Print("  /abt reset              - restore defaults")
-end
-
--- slash command word -> settings key (commands arrive lowercased)
-local toggleKeys = { main = "main", percent = "percent", tot = "tot", totmax = "totMax" }
-
-function M:Slash(msg)
-	msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
-	local cmd, arg = msg:match("^(%S+)%s*(.*)$")
-
-	if not cmd or cmd == "" or cmd == "status" then
-		ShowStatus()
-		return
-	elseif cmd == "help" or cmd == "?" then
-		ShowHelp()
-		return
-	elseif cmd == "reset" then
-		for k, v in pairs(defaults) do db[k] = v end
-		Print("defaults restored.")
-	elseif toggleKeys[cmd] then
-		local key = toggleKeys[cmd]
-		local v = ParseBool(arg)
-		if v == nil then
-			v = not db[key] -- no argument: toggle
-		end
-		db[key] = v
-		if key == "main" and not v then
-			DisableMain()
-		end
-		Print(cmd .. " " .. OnOff(v))
-	elseif cmd == "mainsize" then
-		local n = tonumber(arg)
-		if not n or (n ~= 0 and (n < 6 or n > 20)) then
-			Print("usage: /abt mainsize <0|6-20>  (0 = default)")
-			return
-		end
-		db.mainSize = math.floor(n)
-		Print("player/target font size " .. (db.mainSize > 0 and tostring(db.mainSize) or "default"))
-	elseif cmd == "totsize" then
-		local n = tonumber(arg)
-		if not n or n < 6 or n > 16 then
-			Print("usage: /abt totsize <6-16>")
-			return
-		end
-		db.totSize = math.floor(n)
-		Print("target-of-target font size " .. db.totSize)
-	else
-		ShowHelp()
-		return
-	end
-
+function M:OnOptionChanged()
 	ApplyAll()
 end
 
@@ -513,7 +381,6 @@ function M:Init(settings)
 	frame:RegisterEvent("PLAYER_LOGIN")
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	frame:RegisterEvent("PLAYER_TARGET_CHANGED")
-	frame:RegisterEvent("CVAR_UPDATE")
 	-- Player + target values: these events fire for both tokens.
 	for _, ev in ipairs({
 		"UNIT_HEALTH", "UNIT_MAXHEALTH",
@@ -527,11 +394,6 @@ function M:Init(settings)
 			ApplyAll()
 		elseif event == "PLAYER_TARGET_CHANGED" then
 			UpdateShownSets("target", "tot")
-		elseif event == "CVAR_UPDATE" then
-			-- Format follows Options > Interface > Status Text when our format is off.
-			if not db.percent and (arg1 == "statusTextDisplay" or arg1 == "STATUS_TEXT_DISPLAY") then
-				UpdateShownSets("player", "target", "tot")
-			end
 		else
 			-- unit events
 			if arg1 == "target" then

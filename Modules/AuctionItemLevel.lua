@@ -1,6 +1,6 @@
 --[[
-	Amity module: Auction Item Level (formerly the AuctionItemLevel addon)
-	======================================================================
+	Amity module: Auction Item Level
+	================================
 	Adds an "iLvl" column to the auction house browse results (the list you get
 	after searching / picking a category). Clicking the column header sorts the
 	results by item level; clicking again reverses the order.
@@ -24,20 +24,13 @@
 
 local _, Amity = ...
 
-local defaults = {
-	equipmentOnly = true,  -- show item level only for armor / weapons (others show blank)
-}
-
 local M = Amity:RegisterModule("auctionilvl", {
-	title    = "Auction Item Level",
-	notes    = "Adds a sortable iLvl column to the auction house browse results.",
-	defaults = defaults,
-	slash    = { "/ail", "/auctionitemlevel" },
+	title       = "Auction Item Level",
+	notes       = "Adds a sortable iLvl column to the auction house browse results.",
+	description = "Adds an iLvl column to the auction house browse results. Click its header to sort "
+		.. "by item level, highest first; click again to reverse. On weapons and armor it sits next "
+		.. "to the required level column. Numbers are coloured by item quality.",
 })
-
-local db -- AmityDB.auctionilvl
-
-local function Print(msg) Amity.Print(msg, M.title) end
 
 -------------------------------------------------------------------------------
 -- Item level lookup (cached, with async loading)
@@ -84,22 +77,10 @@ local function GetItemLevel(itemKey)
 	return nil
 end
 
-local function IsEquipment(itemKey)
-	local info = C_AuctionHouse.GetItemKeyInfo(itemKey)
-	if info then
-		return info.isEquipment
-	end
-	-- Fall back on the item class if the key info is not available yet.
-	local classID = select(6, C_Item.GetItemInfoInstant(itemKey.itemID))
-	return classID == Enum.ItemClass.Weapon or classID == Enum.ItemClass.Armor
-end
-
--- Value used for sorting: equipment (or everything, per option) by item level,
--- unknown / hidden values sort as 0.
+-- Value used for sorting; unknown item levels sort as 0.
 local function GetSortValue(browseResult)
 	local itemKey = browseResult and browseResult.itemKey
 	if not itemKey then return 0 end
-	if db.equipmentOnly and not IsEquipment(itemKey) then return 0 end
 	return GetItemLevel(itemKey) or 0
 end
 
@@ -129,7 +110,7 @@ end
 
 function AmityAuctionItemLevelCellMixin:UpdateDisplay()
 	local itemKey = self.rowData and self.rowData.itemKey
-	if not itemKey or (db.equipmentOnly and not IsEquipment(itemKey)) then
+	if not itemKey then
 		self.Text:SetText("")
 		self:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
 		return
@@ -176,7 +157,7 @@ end
 local ilvlSort = nil -- nil = inactive, "asc" or "desc"
 
 -- Stable sort of the browse results by item level; ties keep the server order.
--- Items without a (shown) item level always go to the bottom.
+-- Items without a known item level always go to the bottom.
 local function SortBrowseResults(browseFrame)
 	if not ilvlSort then return false end
 	local results = browseFrame.browseResults
@@ -394,40 +375,10 @@ local function HookAuctionHouse()
 end
 
 -------------------------------------------------------------------------------
--- Slash commands
--------------------------------------------------------------------------------
-
-local OnOff, ParseBool = Amity.OnOff, Amity.ParseBool
-
-function M:Slash(msg)
-	msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
-	local cmd, arg = msg:match("^(%S+)%s*(.*)$")
-
-	if cmd == "all" then
-		local v = ParseBool(arg)
-		if v == nil then v = db.equipmentOnly end -- toggle
-		db.equipmentOnly = not v
-		Print("item level for all items " .. OnOff(not db.equipmentOnly))
-	else
-		Print(("show item level for all items %s"):format(OnOff(not db.equipmentOnly)))
-		Print("  /ail all on|off   - show item level for non-equipment too")
-		return
-	end
-
-	-- Redraw with the new setting.
-	local browseFrame = AuctionHouseFrame and AuctionHouseFrame.BrowseResultsFrame
-	if browseFrame and browseFrame.ItemList then
-		ResortAndRefresh(browseFrame)
-		browseFrame.ItemList:DirtyScrollFrame()
-	end
-end
-
--------------------------------------------------------------------------------
 -- Events
 -------------------------------------------------------------------------------
 
-function M:Init(settings)
-	db = settings
+function M:Init()
 	-- Blizzard_AuctionHouseUI is load-on-demand; it may or may not be loaded yet.
 	HookAuctionHouse()
 

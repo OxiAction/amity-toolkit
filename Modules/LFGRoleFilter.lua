@@ -1,6 +1,6 @@
 --[[
-	Amity module: LFG Role Filter (formerly the LFGRoleFilter addon)
-	================================================================
+	Amity module: LFG Role Filter
+	=============================
 	Adds three toggle buttons (Tank / Healer / DPS) to the "Browse" tab of the
 	Looking For Group window on WoW Forever and filters the result list by
 	role. Pick one or more roles; with none picked the list is untouched.
@@ -9,7 +9,7 @@
 	----------------------------
 	* Solo players ("Looking for group" listings): the player can fill that role.
 	* Groups ("Looking for more" listings): the group still needs that role
-	  (default), or, with "/lfgrf mode has", the group already has that role.
+	  (default), or, with the "already has" group mode, the group has that role.
 	* Your own listing is always shown.
 	Several selected roles are OR-ed: a result is kept if any of them match.
 
@@ -35,10 +35,12 @@ local defaults = {
 }
 
 local M = Amity:RegisterModule("lfgfilter", {
-	title    = "LFG Role Filter",
-	notes    = "Adds Tank / Healer / DPS filter buttons to the Looking For Group browse list.",
-	defaults = defaults,
-	slash    = { "/lfgrf", "/lfgrolefilter" },
+	title       = "LFG Role Filter",
+	notes       = "Adds Tank / Healer / DPS filter buttons to the Looking For Group browse list.",
+	description = "Adds Tank / Healer / DPS buttons to the Looking For Group browse list. Solo players "
+		.. "are matched by the roles they can fill, groups by the roles they still need (or already "
+		.. "have). Several roles show anyone matching any of them; your own listing is always shown.",
+	defaults    = defaults,
 })
 
 local db -- AmityDB.lfgfilter
@@ -51,8 +53,6 @@ local ROLES = {
 
 local BUTTON_SIZE = 26
 local BUTTON_GAP  = 6
-
-local function Print(msg) Amity.Print(msg, M.title) end
 
 local function AnyRoleSelected()
 	return db and (db.tank or db.healer or db.dps) or false
@@ -177,6 +177,7 @@ local function OnRoleClick(button)
 	UpdateButtonLook(button)
 	PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 	Refresh()
+	Amity:UpdatePanel()
 end
 
 local function CreateUI()
@@ -259,10 +260,8 @@ local function TrySetup()
 end
 
 -------------------------------------------------------------------------------
--- Slash commands
+-- Panel options
 -------------------------------------------------------------------------------
-
-local OnOff = Amity.OnOff
 
 local function SyncButtons()
 	if not ui then return end
@@ -272,54 +271,22 @@ local function SyncButtons()
 	end
 end
 
-local function ShowStatus()
-	Print(("tank %s, healer %s, dps %s; group mode: %s"):format(
-		OnOff(db.tank), OnOff(db.healer), OnOff(db.dps),
-		db.mode == "has" and "has the role" or "needs the role"))
-end
+M.options = {
+	{ type = "header", label = "Show listings for these roles" },
+	{ type = "toggle", key = "tank",   label = ROLES[1].label },
+	{ type = "toggle", key = "healer", label = ROLES[2].label },
+	{ type = "toggle", key = "dps",    label = ROLES[3].label },
+	{ type = "select", key = "mode", label = "Which groups count as a match?",
+		tooltip = "Solo players always match by the roles they can play.",
+		values = {
+			{ "needs", "Groups that are still looking for the role" },
+			{ "has",   "Groups that already have a player in the role" },
+		} },
+	{ type = "button", label = "Clear role filters",
+		onClick = function() db.tank, db.healer, db.dps = false, false, false; M:OnOptionChanged() end },
+}
 
-local function ShowHelp()
-	Print("commands:")
-	Print("  /lfgrf tank|healer|dps [on|off]  - toggle a role filter")
-	Print("  /lfgrf mode needs|has            - groups: need the role (default) or already have it")
-	Print("  /lfgrf clear                     - clear all role filters")
-	Print("  /lfgrf status")
-end
-
-function M:Slash(msg)
-	msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
-	local cmd, arg = msg:match("^(%S+)%s*(.*)$")
-
-	if not cmd or cmd == "" or cmd == "status" then
-		ShowStatus()
-		return
-	elseif cmd == "help" or cmd == "?" then
-		ShowHelp()
-		return
-	elseif cmd == "tank" or cmd == "healer" or cmd == "heal" or cmd == "dps" or cmd == "damage" then
-		local key = (cmd == "heal") and "healer" or (cmd == "damage") and "dps" or cmd
-		local v
-		if arg == "on" or arg == "1" then v = true
-		elseif arg == "off" or arg == "0" then v = false
-		else v = not db[key] end
-		db[key] = v
-		Print(key .. " " .. OnOff(v))
-	elseif cmd == "mode" then
-		if arg == "needs" or arg == "has" then
-			db.mode = arg
-			Print("group mode: " .. (arg == "has" and "has the role" or "needs the role"))
-		else
-			Print("usage: /lfgrf mode needs|has")
-			return
-		end
-	elseif cmd == "clear" or cmd == "reset" then
-		db.tank, db.healer, db.dps = false, false, false
-		Print("role filters cleared")
-	else
-		ShowHelp()
-		return
-	end
-
+function M:OnOptionChanged()
 	SyncButtons()
 	Refresh()
 end

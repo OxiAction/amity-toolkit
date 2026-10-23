@@ -1,5 +1,5 @@
 --[[
-	Minimap button: click opens the modules panel, drag moves the button
+	Minimap button: click opens the Amity panel, drag moves the button
 	around the minimap edge. The angle is saved in AmityDB.minimap.
 ]]
 
@@ -26,12 +26,17 @@ local function OnEnter(self)
 	GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 	GameTooltip:SetText(Amity.NAME .. " |cffaaaaaav" .. Amity.version .. "|r")
 	for _, key in ipairs(Amity.moduleOrder) do
-		local on = Amity.loaded[key]
-		GameTooltip:AddDoubleLine(Amity.modules[key].title, on and "on" or "off",
-			1, 1, 1, on and 0.2 or 1, on and 1 or 0.3, 0.2)
+		local title = Amity.modules[key].title
+		if Amity.unavailable[key] then
+			GameTooltip:AddDoubleLine(title, "inactive", 1, 1, 1, 0.5, 0.5, 0.5)
+		else
+			local on = Amity.loaded[key]
+			GameTooltip:AddDoubleLine(title, on and "on" or "off",
+				1, 1, 1, on and 0.2 or 1, on and 1 or 0.3, 0.2)
+		end
 	end
 	GameTooltip:AddLine(" ")
-	GameTooltip:AddLine("Click: modules panel", 0.7, 0.7, 0.7)
+	GameTooltip:AddLine("Click: open the Amity panel", 0.7, 0.7, 0.7)
 	GameTooltip:AddLine("Drag: move this button", 0.7, 0.7, 0.7)
 	GameTooltip:Show()
 end
@@ -75,6 +80,9 @@ end
 
 function Amity:SetMinimapButtonShown(shown)
 	self.db.minimap.hide = not shown
-	if button then button:SetShown(shown) end
-	if self.UpdatePanel then self:UpdatePanel() end
+	if shown and not button then self:CreateMinimapButton() end
+	if not button then return end
+	if shown then UpdatePosition() end -- the minimap may have changed size since login
+	button:SetShown(shown)
+	self:UpdatePanel()
 end

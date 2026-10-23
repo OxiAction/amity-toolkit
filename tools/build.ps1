@@ -2,7 +2,7 @@
 	Builds dist\Amity-<version>.zip for a manual CurseForge upload.
 	The zip contains a single "Amity" folder, the same layout the packager makes.
 
-	Usage:  powershell -ExecutionPolicy Bypass -File tools\build.ps1 [-Version 1.0.0]
+	Usage:  powershell -ExecutionPolicy Bypass -File tools\build.ps1 [-Version 0.1.0-beta]
 	Without -Version the newest "## [x.y.z]" entry of CHANGELOG.md is used.
 #>
 param([string]$Version)

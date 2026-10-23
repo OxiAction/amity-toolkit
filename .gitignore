@@ -1,5 +1,18 @@
+# IDE
 .idea/
 *.iml
+.vscode/
+
+# Build output
 dist/
 .release/
+
+# Python
 __pycache__/
+*.pyc
+.venv/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -25,8 +25,8 @@ Worth adding, taken in game:
 1. Player + target frames with the `100/200 50%` text
 2. Auction house with the iLvl column sorted
 3. LFG browse list with the role buttons
-4. The Amity Toolkit panel opened from the minimap button
-5. The Overpower alert (`/opa proc` simulates one)
+4. The Amity Toolkit panel opened from the minimap button, e.g. on the Bar Text tab
+5. The Overpower alert (*Test alert* on its tab in the panel shows one)
 
 `curseforge/banner.png` can go in the gallery as well.
 
@@ -36,7 +36,7 @@ Worth adding, taken in game:
 powershell -ExecutionPolicy Bypass -File tools\build.ps1
 ```
 
-Upload `dist\Amity-<version>.zip` under *Files → Upload File*. Choose the WoW Forever game version (Interface 16001), release type *Release*, and paste the CHANGELOG entry.
+Upload `dist\Amity-<version>.zip` under *Files → Upload File*. Choose the WoW Forever game version (Interface 16001), release type *Beta* for a beta version (*Release* once it is stable), and paste the CHANGELOG entry.
 
 ## 3b. Or release automatically from GitHub
 
@@ -45,8 +45,8 @@ Upload `dist\Amity-<version>.zip` under *Files → Upload File*. Choose the WoW 
 3. GitHub repo → *Settings → Secrets and variables → Actions* → new secret `CF_API_KEY` with that token.
 4. Release by adding a CHANGELOG entry and pushing a tag:
    ```
-   git tag v1.0.0
-   git push origin v1.0.0
+   git tag v0.1.0-beta
+   git push origin v0.1.0-beta
    ```
    `.github/workflows/release.yml` builds the zip with the BigWigs packager, uploads it to CurseForge and creates a GitHub release.
 
