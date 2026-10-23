@@ -1,6 +1,6 @@
-![Amity](curseforge/banner.png)
+![Amity Toolkit](curseforge/banner.png)
 
-# Amity
+# Amity Toolkit
 
 Quality-of-life modules for **World of Warcraft: Forever** (Interface 16001), bundled in one addon. Each module can be switched on or off from the minimap button or with `/amity`.
 

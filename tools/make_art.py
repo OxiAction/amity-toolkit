@@ -1,5 +1,5 @@
 """
-Renders the Amity artwork with Pillow:
+Renders the Amity Toolkit artwork with Pillow:
 
   Media/Icon.tga             64x64 in-game icon (TOC IconTexture)
   curseforge/logo.png        400x400 CurseForge project avatar
@@ -281,6 +281,13 @@ def make_banner(final=(1600, 400)):
     img.alpha_composite(glow(wm, H * 0.03, TEAL, 0.5))
     img.alpha_composite(fill(dilate(wm, H * 0.014), Image.new("RGB", size, OUTLINE)))
     img.alpha_composite(fill(wm, vertical_gradient(size, [(0, GOLD_LIGHT), (0.35, GOLD), (0.6, GOLD_DARK), (1, GOLD_DARK)])))
+
+    # "TOOLKIT" in teal, bottom-aligned with the wordmark
+    sub = font("segoeuib.ttf", int(H * 0.13))
+    sx = tx + text_width("AMITY", word, int(H * 0.035)) + int(H * 0.06)
+    sm = text_mask(size, (sx, int(H * 0.32)), "TOOLKIT", sub, tracking=int(H * 0.02))
+    img.alpha_composite(glow(sm, H * 0.02, TEAL, 0.6))
+    img.alpha_composite(fill(sm, vertical_gradient(size, [(0, TEAL_LIGHT), (1, TEAL)])))
 
     # tagline
     tag = font("segoeui.ttf", int(H * 0.085))

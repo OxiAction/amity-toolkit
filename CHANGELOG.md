@@ -2,7 +2,7 @@
 
 ## [1.0.0] - 2026-10-23
 
-First release of **Amity**, which combines four earlier standalone addons:
+First release of **Amity Toolkit**, which combines four earlier standalone addons:
 
 - **Bar Text** (was AlwaysBarText): always-on health / resource text formatted as `100/200 50%` on the player, target and target-of-target frames.
 - **Auction Item Level** (was AuctionItemLevel): sortable iLvl column in the auction house browse results.

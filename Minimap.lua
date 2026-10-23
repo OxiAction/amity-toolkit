@@ -24,7 +24,7 @@ end
 
 local function OnEnter(self)
 	GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-	GameTooltip:SetText(Amity.BRAND .. " |cffaaaaaav" .. Amity.version .. "|r")
+	GameTooltip:SetText(Amity.NAME .. " |cffaaaaaav" .. Amity.version .. "|r")
 	for _, key in ipairs(Amity.moduleOrder) do
 		local on = Amity.loaded[key]
 		GameTooltip:AddDoubleLine(Amity.modules[key].title, on and "on" or "off",

@@ -1,6 +1,6 @@
 --[[
-	Amity
-	=====
+	Amity Toolkit
+	=============
 	One addon, several independent modules (Bar Text, Auction Item Level,
 	LFG Role Filter, Overpower Alert). Each module lives in Modules\ and
 	registers itself with Amity:RegisterModule. On ADDON_LOADED the core
@@ -20,7 +20,8 @@
 
 local ADDON_NAME, Amity = ...
 
-Amity.BRAND = "|cff3fe0c5Amity|r"
+Amity.BRAND = "|cff3fe0c5Amity|r"           -- short chat prefix
+Amity.NAME = "|cff3fe0c5Amity|r Toolkit"   -- full name for titles
 Amity.ICON = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Media\\Icon"
 Amity.MINIMAP_ICON = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Media\\MinimapIcon"
 

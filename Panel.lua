@@ -42,7 +42,7 @@ local function CreatePanel()
 
 	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	title:SetPoint("TOP", frame, "TOP", 0, -6)
-	title:SetText(Amity.BRAND .. "  |cffaaaaaav" .. Amity.version .. "|r")
+	title:SetText(Amity.NAME .. "  |cffaaaaaav" .. Amity.version .. "|r")
 
 	local logo = frame:CreateTexture(nil, "OVERLAY")
 	logo:SetSize(18, 18)
