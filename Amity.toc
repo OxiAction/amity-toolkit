@@ -7,7 +7,7 @@
 ## SavedVariables: AmityDB
 ## OptionalDeps: Blizzard_AuctionHouseUI
 ## AddonCompartmentFunc: Amity_OnAddonCompartmentClick
-## X-License: MIT
+## X-License: All Rights Reserved
 ## X-Website: https://github.com/OxiAction/amity-toolkit
 
 Core.lua

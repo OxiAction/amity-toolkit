@@ -12,7 +12,7 @@ CurseForge → *Create Project* → **World of Warcraft** → Addon.
 | Avatar / logo    | `curseforge/logo.png` (400x400; `logo-1024.png` if a larger one is wanted) |
 | Main category    | *Miscellaneous* (or *Quality of Life* if offered) |
 | Extra categories | *Auction & Economy*, *Unit Frames*, *Class: Warrior*, *Combat* |
-| License          | MIT (matches `LICENSE`) |
+| License          | All Rights Reserved (matches `LICENSE`) |
 | Source           | GitHub, `https://github.com/OxiAction/amity-toolkit` |
 | Issues           | `https://github.com/OxiAction/amity-toolkit/issues` |
 
