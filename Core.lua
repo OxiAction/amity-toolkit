@@ -2,7 +2,7 @@
 	Amity Toolkit
 	=============
 	One addon, several independent modules (Bar Text, Auction Item Level,
-	LFG Role Filter, Overpower Alert). Each module lives in Modules\ and
+	LFG Role Filter, Overpower Alert, Revenge Alert, Battle Shout Alert, Chat Timestamps, Auto Replace Enchant). Each module lives in Modules\ and
 	registers itself with Amity:RegisterModule. On ADDON_LOADED the core
 	creates the saved variables and initializes every enabled module.
 
@@ -62,6 +62,7 @@ end
 		title       = "Bar Text",
 		notes       = "one line, shown in the overview and tooltips",
 		description = "a paragraph for the module's tab",
+		offByDefault = true,                -- optional: stays off until switched on in the panel
 		defaults    = { ... },              -- module settings (AmityDB[key])
 		options     = { option, ... },      -- controls on the module's tab, see below
 		Init        = function(self, db),   -- called once at load if enabled
@@ -92,7 +93,10 @@ function Amity:RegisterModule(key, module)
 end
 
 function Amity:IsModuleEnabled(key)
-	return self.db and self.db.modules[key] ~= false
+	if not self.db then return false end
+	local enabled = self.db.modules[key]
+	if enabled == nil then return not self.modules[key].offByDefault end
+	return enabled
 end
 
 function Amity:SetModuleEnabled(key, enabled)

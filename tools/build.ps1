@@ -17,7 +17,7 @@ if (-not $Version) {
 }
 
 # Everything the addon needs at runtime; keep in sync with .pkgmeta's ignore list.
-$include = @("Amity.toc", "Core.lua", "Minimap.lua", "Panel.lua", "Modules", "Media", "CHANGELOG.md", "LICENSE")
+$include = @("Amity.toc", "Core.lua", "Minimap.lua", "Panel.lua", "LFGLocation.lua", "Modules", "Media", "CHANGELOG.md", "LICENSE")
 
 $dist = Join-Path $root "dist"
 $stage = Join-Path $dist "Amity"

@@ -7,7 +7,7 @@ CurseForge → *Create Project* → **World of Warcraft** → Addon.
 | Field            | Value |
 | ---------------- | ----- |
 | Name             | `Amity Toolkit` |
-| Summary          | `Small quality-of-life modules for WoW Forever: always-on bar text, auction iLvl, LFG role filter, Overpower alert.` |
+| Summary          | `Small quality-of-life modules for WoW Forever: always-on bar text, auction iLvl, LFG role filter, Overpower and Revenge alerts, chat timestamps.` |
 | Description      | paste `curseforge/DESCRIPTION.md` (the editor accepts Markdown) |
 | Avatar / logo    | `curseforge/logo.png` (400x400; `logo-1024.png` if a larger one is wanted) |
 | Main category    | *Miscellaneous* (or *Quality of Life* if offered) |
@@ -26,7 +26,7 @@ Worth adding, taken in game:
 2. Auction house with the iLvl column sorted
 3. LFG browse list with the role buttons
 4. The Amity Toolkit panel opened from the minimap button, e.g. on the Bar Text tab
-5. The Overpower alert (*Test alert* on its tab in the panel shows one)
+5. The Overpower and Revenge alerts (*Test alert* on their tabs in the panel shows them)
 
 `curseforge/banner.png` can go in the gallery as well.
 

@@ -10,6 +10,10 @@ Quality-of-life modules for **World of Warcraft: Forever** (Interface 16001), bu
 | Auction Item Level  | Sortable iLvl column in the auction house browse results |
 | LFG Role Filter     | Tank / Healer / DPS filter buttons in the LFG browse list |
 | Overpower Alert - Warrior | Warriors only: Overpower icon with a 5s countdown after a dodge |
+| Revenge Alert - Warrior | Warriors only: Revenge icon with a 5s countdown after a block, dodge or parry |
+| Battle Shout Alert - Warrior | Warriors only: movable, flashing icon while Battle Shout is not active or about to run out |
+| Chat Timestamps | The time, e.g. `14:17`, in front of every chat message |
+| Auto Replace Enchant | Off by default: skips the "replace this enchant?" prompt and enchants right away |
 
 Everything is managed in one panel, opened with `/amity`, the minimap button or the addon compartment. It has a tab per module with an on/off switch, a description and the module's settings. The panel can be dragged anywhere and stays open until you close it. Switching a module on or off applies after a UI reload; the panel offers a button for it.
 

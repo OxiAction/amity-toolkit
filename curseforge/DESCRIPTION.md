@@ -52,7 +52,52 @@ Never miss an Overpower window again. When your target **dodges**, a large Overp
 - Movable: unlock it in the panel and drag it wherever you like
 - A test button shows the alert so you can check how it looks
 - Pick an alert sound from a list (or none); each one plays when you pick it
+- Shows up even without the rage to use it, tinted blue until you have enough
 - Disappears automatically when you use Overpower or leave combat
+
+---
+
+### 🗡️ Revenge Alert - Warrior only
+The same alert for tanks. When you **block, dodge or parry**, a large Revenge icon appears with a **5-second countdown**:
+
+- Moves separately from the Overpower icon: unlock it on its own tab and drag it wherever you like
+- Its own on/off switch and its own alert sound (or none)
+- A test button shows the alert so you can check how it looks
+- Shows up even without the rage to use it, tinted blue until you have enough
+- Disappears automatically when you use Revenge or leave combat
+
+---
+
+### 📣 Battle Shout Alert - Warrior only
+Never forget your shout. While **Battle Shout is not active or about to run out**, a large **flashing** icon stays on screen:
+
+- Warns 30 seconds before the buff ends with a countdown; choose 5 to 60 seconds, or only once it is gone
+- Movable: unlock it on its own tab and drag it wherever you like
+- Its own on/off switch and its own alert sound (or none)
+- Optional: only warn while you are in combat
+- A test button shows the alert so you can check how it looks
+- Tinted blue while you don't have the rage to shout
+- Disappears as soon as the buff is back, and stays hidden while you are dead or on a flight path
+
+---
+
+### 🕒 Chat Timestamps
+The time in front of **every chat message**, e.g. `14:17 [Guild] [Someone]: hi`:
+
+- Formats: `14:17`, `14:17:05`, `2:17 PM` or `2:17:05 PM`
+- Optional brackets (`[14:17]`) and gray or message-coloured time
+- Settings apply to new messages right away
+- Leaves the combat log alone, and never doubles up with Blizzard's own timestamp option
+
+---
+
+### ✨ Auto Replace Enchant - off by default
+Levelling Enchanting? Skip the **"replace this enchant?"** prompt, and the new enchant goes on right away:
+
+- Saves a click on every item that already has an enchant
+- Off by default: switch it on in its tab in the panel
+- Careful: it also applies to weapon oils and stones, so a good enchant can be overwritten without warning
+- Enchanting an item in the trade window still asks
 
 ---
 
