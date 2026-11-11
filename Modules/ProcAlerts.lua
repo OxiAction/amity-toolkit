@@ -17,6 +17,20 @@
 	window after its proc. A proc also counts when only rage is missing (the
 	client reports that separately); the icon is then tinted blue, like the
 	action bars.
+
+	Overpower in Berserker Stance: the spell is never usable outside Battle
+	Stance, so there the module watches UNIT_COMBAT on the target instead
+	(its "DODGE" action is readable, only the amount is a secret value). The
+	event does not say whose attack was dodged, so in a group another
+	player's dodged attack also shows the alert. What the game would still
+	refuse after the stance swap is checked by hand:
+	* Overpower's own 5s cooldown, timed from our last cast (the cooldown API
+	  is secret in combat). A dodge is ignored when the cooldown outlasts
+	  the window, otherwise the icon shows the remaining cooldown sweep.
+	* Rage: a stance swap keeps only what Tactical Mastery allows (5 per
+	  rank). Too little for Overpower tints the icon blue, as in Battle Stance.
+	* The window belongs to the target that dodged (Overpower works like
+	  combo points), so changing target ends it.
 ]]
 
 local _, Amity = ...
@@ -51,6 +65,7 @@ local function CreateProcAlert(spec)
 	local db -- AmityDB[spec.key]
 	local f  -- the alert frame, created in Init (warriors only)
 	local procActive = false
+	local lastCast -- GetTime() of our last cast, for spec.cooldown
 
 	local function PlayAlertSound()
 		local id = SOUNDKIT and SOUNDKIT[db.sound]
@@ -89,6 +104,30 @@ local function CreateProcAlert(spec)
 		return flag == false or flag == 0
 	end
 
+	local TACTICAL_MASTERY = { 12295, 12676, 12677, 12678, 12679 } -- ranks 1-5
+
+	local function IsKnown(spellID)
+		for _, fn in ipairs({ IsPlayerSpell or false, C_SpellBook and C_SpellBook.IsSpellKnown or false }) do
+			if fn then
+				local ok, known = pcall(fn, spellID)
+				if ok and known == true then return true end
+			end
+		end
+		return false
+	end
+
+	-- After swapping to Battle Stance, would there be rage enough to cast?
+	-- Unknown (secret rage) counts as enough.
+	local function TooLittleRageAfterSwap()
+		local ok, rage = pcall(UnitPower, "player", Enum and Enum.PowerType and Enum.PowerType.Rage or 1)
+		if not ok or type(rage) ~= "number" or IsSecret(rage) then return false end
+		local kept = 0
+		for rank, id in ipairs(TACTICAL_MASTERY) do
+			if IsKnown(id) then kept = rank * 5 end
+		end
+		return math.min(rage, kept) < spec.rageCost
+	end
+
 	local function SpellCooldown()
 		if C_Spell and C_Spell.GetSpellCooldown then
 			local ok, info = pcall(C_Spell.GetSpellCooldown, SPELL)
@@ -107,7 +146,12 @@ local function CreateProcAlert(spec)
 	---------------------------------------------------------------------------
 
 	local function UpdateRageTint()
-		local _, noRage = ProcState()
+		local noRage
+		if f.fromDodge and not procActive then
+			noRage = TooLittleRageAfterSwap() -- still in Berserker Stance
+		else
+			noRage = select(2, ProcState())
+		end
 		if noRage then
 			f.icon:SetVertexColor(0.5, 0.5, 1)
 		else
@@ -117,6 +161,11 @@ local function CreateProcAlert(spec)
 
 	-- Includes the global cooldown, like the action bars.
 	local function UpdateCooldown()
+		-- Our own record first: in combat the API's values are secret.
+		if spec.cooldown and lastCast and GetTime() < lastCast + spec.cooldown then
+			f.cooldown:SetCooldown(lastCast, spec.cooldown)
+			return
+		end
 		local start, duration, modRate = SpellCooldown()
 		if IsSecret(start) or IsSecret(duration) or IsSecret(modRate) then
 			-- Can't check them, so let the widget decide: a zero duration draws no sweep.
@@ -171,6 +220,7 @@ local function CreateProcAlert(spec)
 	local function Cancel()
 		if f.unlocked then return end
 		f.expires = nil
+		f.fromDodge = nil
 		f.cooldown:Clear()
 		f:Hide()
 	end
@@ -268,8 +318,32 @@ local function CreateProcAlert(spec)
 		if f.expires then UpdateRageTint() end -- rage changes while the icon is up
 	end
 
+	local function InStance(stanceSpellID)
+		local form = GetShapeshiftForm and GetShapeshiftForm() or 0
+		if form == 0 then return false end
+		local _, _, _, formSpellID = GetShapeshiftFormInfo(form)
+		return formSpellID == stanceSpellID
+	end
+
+	-- The target dodged while we are in spec.dodgeStance (where the spell is
+	-- not usable, so CheckUsable never sees the proc).
+	local function OnTargetDodge()
+		if f.unlocked or not InStance(spec.dodgeStance) then return end
+		if not UnitCanAttack("player", "target") or not UnitAffectingCombat("player") then return end
+		-- On cooldown for the whole window: no chance to use it.
+		if spec.cooldown and lastCast and lastCast + spec.cooldown - GetTime() >= DURATION then return end
+		if f.expires then
+			f.expires = GetTime() + DURATION -- dodged again: the window starts over
+		else
+			f.fromDodge = true
+			Trigger()
+		end
+	end
+
 	local function OnEvent(self, event, arg1, arg2, arg3)
-		if event == "SPELL_UPDATE_USABLE" then
+		if event == "UNIT_COMBAT" then
+			if arg2 == "DODGE" then OnTargetDodge() end
+		elseif event == "SPELL_UPDATE_USABLE" then
 			CheckUsable()
 		elseif event == "SPELL_UPDATE_COOLDOWN" then
 			if f.expires then UpdateCooldown() end
@@ -278,7 +352,10 @@ local function CreateProcAlert(spec)
 		elseif event == "SPELL_ACTIVATION_OVERLAY_GLOW_HIDE" then
 			if IsTrackedSpell(arg1) then Cancel() end
 		elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-			if IsTrackedSpell(arg3) then procActive = false Cancel() end
+			if IsTrackedSpell(arg3) then lastCast = GetTime() procActive = false Cancel() end
+		elseif event == "PLAYER_TARGET_CHANGED" then
+			-- The window belongs to the target that dodged.
+			if f.fromDodge and not procActive then Cancel() end
 		elseif event == "PLAYER_REGEN_ENABLED" then
 			procActive = false
 			Cancel()
@@ -295,6 +372,10 @@ local function CreateProcAlert(spec)
 		f:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
 		f:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
 		f:RegisterEvent("PLAYER_REGEN_ENABLED")
+		if spec.dodgeStance then
+			f:RegisterUnitEvent("UNIT_COMBAT", "target")
+			f:RegisterEvent("PLAYER_TARGET_CHANGED")
+		end
 	end
 
 	function M:Init(settings)
@@ -352,10 +433,15 @@ CreateProcAlert({
 	fallbackIcon = "Interface/Icons/Ability_MeleeDamage",
 	frameName    = "AmityOverpowerAlertFrame",
 	defaultY     = 100,
+	dodgeStance  = 2458, -- Berserker Stance: watch the target's dodges there
+	cooldown     = 5,
+	rageCost     = 5,
 	title        = "Overpower Alert - Warrior",
 	notes        = "Warriors only: movable Overpower icon with a 5s countdown when your target dodges.",
 	description  = "Warriors only. When your target dodges, a large Overpower icon appears with a 5 second countdown, "
 		.. "even without the rage to use it: the icon is then tinted blue. "
+		.. "It also appears in Berserker Stance, so you can switch to Battle Stance in time; there, "
+		.. "in a group, a dodge of someone else's attack counts too. "
 		.. "It disappears when you use Overpower or leave combat. Unlock the icon to drag it "
 		.. "where you want it.",
 	testTooltip  = "Shows the alert as if your target had dodged.",
