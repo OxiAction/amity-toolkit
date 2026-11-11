@@ -21,8 +21,10 @@
 	Overpower in Berserker Stance: the spell is never usable outside Battle
 	Stance, so there the module watches UNIT_COMBAT on the target instead
 	(its "DODGE" action is readable, only the amount is a secret value). The
-	event does not say whose attack was dodged, so in a group another
-	player's dodged attack also shows the alert. What the game would still
+	event does not say whose attack was dodged, so it is only used while
+	solo: in a group, another player's dodged attack would show the alert
+	too. (The combo point Overpower is flagged with is not given to warriors:
+	GetComboPoints stays 0 after a dodge, tested in game.) What the game would still
 	refuse after the stance swap is checked by hand:
 	* Overpower's own 5s cooldown, timed from our last cast (the cooldown API
 	  is secret in combat). A dodge is ignored when the cooldown outlasts
@@ -329,6 +331,7 @@ local function CreateProcAlert(spec)
 	-- not usable, so CheckUsable never sees the proc).
 	local function OnTargetDodge()
 		if f.unlocked or not InStance(spec.dodgeStance) then return end
+		if IsInGroup() then return end -- can't tell whose attack was dodged
 		if not UnitCanAttack("player", "target") or not UnitAffectingCombat("player") then return end
 		-- On cooldown for the whole window: no chance to use it.
 		if spec.cooldown and lastCast and lastCast + spec.cooldown - GetTime() >= DURATION then return end
@@ -440,8 +443,7 @@ CreateProcAlert({
 	notes        = "Warriors only: movable Overpower icon with a 5s countdown when your target dodges.",
 	description  = "Warriors only. When your target dodges, a large Overpower icon appears with a 5 second countdown, "
 		.. "even without the rage to use it: the icon is then tinted blue. "
-		.. "It also appears in Berserker Stance, so you can switch to Battle Stance in time; there, "
-		.. "in a group, a dodge of someone else's attack counts too. "
+		.. "While you play solo it also appears in Berserker Stance, so you can switch to Battle Stance in time. "
 		.. "It disappears when you use Overpower or leave combat. Unlock the icon to drag it "
 		.. "where you want it.",
 	testTooltip  = "Shows the alert as if your target had dodged.",

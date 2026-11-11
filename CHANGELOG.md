@@ -4,7 +4,7 @@
 
 Changes:
 
-- **Overpower Alert** now also works in Berserker Stance: when your target dodges, the icon appears so you can switch to Battle Stance in time. It stays hidden while Overpower's cooldown would outlast the window, is tinted blue when the stance swap would leave too little rage (Tactical Mastery), and ends when you change target. In a group, a dodge of someone else's attack can also show it.
+- **Overpower Alert** now also works in Berserker Stance while you play solo: when your target dodges, the icon appears so you can switch to Battle Stance in time. It stays hidden while Overpower's cooldown would outlast the window, is tinted blue when the stance swap would leave too little rage (Tactical Mastery), and ends when you change target. In a group the game doesn't tell whose attack was dodged, so there it only works in Battle Stance.
 
 ## [1.0.0] - 2026-11-10
 
