@@ -34,6 +34,8 @@ Adds a sortable **iLvl column** to the auction house browse results, colored by 
 ### ⚔️ Overpower Alert - Warrior only
 Large Overpower icon with a **5-second countdown** when your target dodges.
 
+- Also in **Berserker Stance**, so you can switch to Battle Stance in time
+
 ### 🗡️ Revenge Alert - Warrior only
 Large Revenge icon with a **5-second countdown** when you block, dodge or parry.
 
