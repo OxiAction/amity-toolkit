@@ -34,7 +34,7 @@ Adds a sortable **iLvl column** to the auction house browse results, colored by 
 ### ⚔️ Overpower Alert - Warrior only
 Large Overpower icon with a **5-second countdown** when your target dodges.
 
-- Also in **Berserker Stance** when you play solo, so you can switch to Battle Stance in time
+- Also in **Berserker Stance** when you play solo, or when no one else in your group is attacking your target, so you can switch to Battle Stance in time
 
 ### 🗡️ Revenge Alert - Warrior only
 Large Revenge icon with a **5-second countdown** when you block, dodge or parry.
@@ -48,7 +48,7 @@ Large **flashing** icon while Battle Shout is missing or about to run out.
 **All Warrior alerts** can be moved on their own, have their own alert sound and a test button, and are tinted blue while you lack the rage.
 
 ### 🕒 Chat Timestamps
-The time in front of every chat mess[DESCRIPTION.md](DESCRIPTION.md)age, e.g. `14:17`.
+The time in front of every chat message, e.g. `14:17`.
 
 - 24 or 12 hour format, with or without seconds
 - Optional brackets and gray color

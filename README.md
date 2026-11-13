@@ -9,7 +9,7 @@ Quality-of-life modules for **World of Warcraft: Forever** (Interface 16001), bu
 | Bar Text            | Always shows health / resource text as `100/200 50%`, `100/200` or `50%` on player, target and target-of-target |
 | Auction Item Level  | Sortable iLvl column in the auction house browse results |
 | LFG Role Filter     | Tank / Healer / DPS filter buttons in the LFG browse list |
-| Overpower Alert - Warrior | Warriors only: Overpower icon with a 5s countdown after a dodge, also in Berserker Stance when solo |
+| Overpower Alert - Warrior | Warriors only: Overpower icon with a 5s countdown after a dodge, also in Berserker Stance when no one else attacks your target |
 | Revenge Alert - Warrior | Warriors only: Revenge icon with a 5s countdown after a block, dodge or parry |
 | Battle Shout Alert - Warrior | Warriors only: movable, flashing icon while Battle Shout is not active or about to run out |
 | Chat Timestamps | The time, e.g. `14:17`, in front of every chat message |

@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.2] - 2026-11-13
+
+Changes:
+
+- **Overpower Alert** in Berserker Stance now also works in a group when no one else can be attacking your target: group members who are far away, out of range, dead, offline or on another target (and their pets) no longer block the alert.
+
 ## [1.0.1] - 2026-11-11
 
 Changes:
