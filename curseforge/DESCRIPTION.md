@@ -13,7 +13,7 @@ Thanks and have fun!
 
 ---
 
-## ✨ Current modules
+## ✨ Features
 
 ### 🩸 Bar Text
 Always shows health and resource values on the **player**, **target** and **target-of-target** frames.
@@ -59,11 +59,8 @@ Skips the **"replace this enchant?"** prompt, handy for levelling Enchanting.
 - Careful: a good enchant can be overwritten without warning, and it also applies to weapon oils and stones
 - Enchanting an item in the trade window still asks
 
----
-
-## 📍 Always on
-
-**LFG player location:** the Looking For Group browse list shows each player's current zone next to the game type (the leader's zone for groups). No setup needed.
+### 📍 LFG Player Location
+See where players are: the Looking For Group browse list shows each player's current zone next to the game type (the leader's zone for groups).
 
 ---
 
