@@ -56,7 +56,8 @@ The time in front of every chat message, e.g. `14:17`.
 ### ✨ Auto Replace Enchant - off by default
 Skips the **"replace this enchant?"** prompt, handy for levelling Enchanting.
 
-- Careful: a good enchant can be overwritten without warning, and it also applies to weapon oils and stones
+- Careful: a good enchant can be overwritten without warning
+- Armor kits, weapon oils and stones still ask (the game does not let addons confirm those)
 - Enchanting an item in the trade window still asks
 
 ### 📍 LFG Player Location

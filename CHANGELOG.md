@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+Fixes:
+
+- **Auto Replace Enchant**: using an armor kit on an already enchanted item no longer shows the "Amity has been blocked from an action only available to the Blizzard UI" error. The game doesn't let addons confirm item enchants, so armor kits, weapon oils and sharpening stones now show the normal prompt. Enchants cast from the Enchanting window are still confirmed automatically.
+- **Auto Replace Enchant**: right-clicking a recipe (or any other item) in your bags no longer shows the "blocked from an action only available to the Blizzard UI" error while the module is on.
+
 ## [1.0.2] - 2026-11-13
 
 Changes:
