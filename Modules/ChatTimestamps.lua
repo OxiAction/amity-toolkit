@@ -2,20 +2,25 @@
 	Amity module: Chat Timestamps
 	=============================
 	Puts the time in front of every message in the chat windows, e.g.
-	"14:17 [Guild] [Someone]: hi". Format, brackets and colour are settings
-	and apply to new messages right away.
+	"14:17 [Guild] [Someone]: hi". Format, brackets and colour are settings.
 
 	How it hooks in
 	---------------
-	Every chat frame's AddMessage is wrapped: the wrapper prefixes the text and
-	calls the original. This covers the normal windows (ChatFrame1..N) and the
-	temporary whisper / pet battle windows, which are wrapped when
-	FCF_OpenTemporaryWindow creates them. The combat log window is skipped (it
-	has its own timestamp setting), and so is everything while Blizzard's own
-	"Chat Timestamps" interface option is on, so messages never get two times.
-	If prefixing fails for some message, it is shown unchanged. Some messages
-	arrive as secret strings, which tainted code must never compare (see
-	Stamped).
+	It doesn't hook anything. The module writes a date() format into Blizzard's
+	own "showTimestamps" CVar (the Options > Social > Chat Timestamps setting),
+	so Blizzard's chat code adds the time itself. Brackets and the gray colour
+	are part of that format string ("|cff808080%H:%M|r ").
+
+	An earlier version wrapped every chat frame's AddMessage. That put addon
+	code inside Blizzard's chat event handler, which then ran tainted for every
+	message and failed on protected tables ("attempted to iterate a table that
+	cannot be accessed while tainted"), thousands of times in battlegrounds.
+	Never wrap AddMessage or add chat filters here again.
+
+	The CVar value the module wrote is remembered (db.applied) together with
+	the value it replaced (db.previous). When the module is switched off, that
+	previous value is restored at the next login, unless the user changed the
+	setting themselves in the meantime.
 ]]
 
 local _, Amity = ...
@@ -24,8 +29,9 @@ local M = Amity:RegisterModule("chattime", {
 	title       = "Chat Timestamps",
 	notes       = "Shows the time, e.g. 14:17, in front of every chat message.",
 	description = "Shows the time in front of every message in your chat windows, e.g. \"14:17\". "
-		.. "Uses your computer's clock. The combat log is left alone, and while Blizzard's own "
-		.. "Chat Timestamps option is on this module stays out of the way so you never see the time twice.",
+		.. "Uses your computer's clock and Blizzard's own chat timestamp setting (Options > Social), "
+		.. "so it takes over that setting while it is on. The combat log is left alone. "
+		.. "If a change does not show up right away, /reload.",
 	defaults    = {
 		format   = "%H:%M", -- a date() format, see FORMATS
 		brackets = false,
@@ -35,70 +41,47 @@ local M = Amity:RegisterModule("chattime", {
 
 local db -- AmityDB.chattime
 
+local CVAR = "showTimestamps"
+
 local FORMATS = {
 	{ "%H:%M",       "14:17" },
 	{ "%H:%M:%S",    "14:17:05" },
-	{ "%I:%M %p",    "2:17 PM" },
-	{ "%I:%M:%S %p", "2:17:05 PM" },
+	{ "%I:%M %p",    "02:17 PM" },
+	{ "%I:%M:%S %p", "02:17:05 PM" },
 }
 
 local GRAY = "|cff808080"
 
 local GetCVar = (C_CVar and C_CVar.GetCVar) or GetCVar
+local SetCVar = (C_CVar and C_CVar.SetCVar) or SetCVar
 
--- Blizzard's own timestamps are on: leave messages alone.
-local function BlizzardTimestampsOn()
-	local value = GetCVar and GetCVar("showTimestamps")
-	return value ~= nil and value ~= "" and value ~= "none"
-end
-
-local function Stamp()
-	local text = date(db.format)
-	if db.format:find("%I", 1, true) then
-		text = text:gsub("^0", "") -- "02:17 PM" -> "2:17 PM"
-	end
-	if db.brackets then text = "[" .. text .. "]" end
-	if db.gray then text = GRAY .. text .. "|r" end
+-- The full format for Blizzard's CVar, e.g. "|cff808080[%H:%M]|r ".
+local function BuildFormat(settings)
+	local text = settings.format
+	if settings.brackets then text = "[" .. text .. "]" end
+	if settings.gray then text = GRAY .. text .. "|r" end
 	return text .. " "
 end
 
--- Returns the stamped text, or nil to leave the message as it is.
--- Some messages are secret strings (WoW Forever): tainted code may not compare
--- them or ask their length, only concatenate them (the result stays secret).
--- So secrets skip the empty check; if even concatenating is refused, the
--- caller's pcall leaves the message unchanged.
-local function Stamped(text)
-	if issecretvalue and issecretvalue(text) then
-		return Stamp() .. text
+local function Apply()
+	local value = BuildFormat(db)
+	local current = GetCVar(CVAR)
+	if current ~= value and current ~= db.applied then
+		db.previous = current -- the user's own setting, restored when switched off
 	end
-	if type(text) ~= "string" or text == "" then return nil end
-	return Stamp() .. text
+	if current ~= value then SetCVar(CVAR, value) end
+	db.applied = value
 end
 
-local wrapped = {} -- chat frame -> true
-
-local function WrapFrame(frame)
-	if not frame or wrapped[frame] or type(frame.AddMessage) ~= "function" then return end
-	wrapped[frame] = true
-	local original = frame.AddMessage
-	frame.AddMessage = function(self, text, ...)
-		if self ~= _G.COMBATLOG and Amity:IsModuleEnabled("chattime") and not BlizzardTimestampsOn() then
-			local ok, stamped = pcall(Stamped, text)
-			if ok and stamped then text = stamped end
-		end
-		return original(self, text, ...)
+-- Module switched off: give the setting back, unless the user changed it.
+local function Restore(settings)
+	if not settings or not settings.applied then return end
+	if GetCVar(CVAR) == settings.applied then
+		local previous = settings.previous
+		if not previous or previous == "" then previous = "none" end
+		SetCVar(CVAR, previous)
 	end
-end
-
-local function WrapAllFrames()
-	for i = 1, (NUM_CHAT_WINDOWS or 10) do
-		WrapFrame(_G["ChatFrame" .. i])
-	end
-	if CHAT_FRAMES then
-		for _, name in ipairs(CHAT_FRAMES) do
-			WrapFrame(_G[name])
-		end
-	end
+	settings.applied, settings.previous = nil, nil
 end
 
 -------------------------------------------------------------------------------
@@ -116,14 +99,14 @@ M.options = {
 		onClick = function()
 			local frame = DEFAULT_CHAT_FRAME or ChatFrame1
 			if not frame then return end
-			if BlizzardTimestampsOn() then
-				frame:AddMessage(Amity.NAME .. ": Blizzard's own Chat Timestamps option is on, so this module "
-					.. "adds nothing. Turn it off under Options > Social to use these settings.")
-			else
-				frame:AddMessage(Amity.NAME .. ": this is how chat messages look now.")
-			end
+			frame:AddMessage(Amity.NAME .. ": chat messages now look like this: "
+				.. date(BuildFormat(db)) .. "|cff40ff40[Guild] [Someone]: hi|r")
 		end },
 }
+
+function M:OnOptionChanged()
+	if db and Amity.loaded.chattime then Apply() end
+end
 
 -------------------------------------------------------------------------------
 -- Init
@@ -131,8 +114,15 @@ M.options = {
 
 function M:Init(settings)
 	db = settings
-	WrapAllFrames()
-	if FCF_OpenTemporaryWindow then
-		hooksecurefunc("FCF_OpenTemporaryWindow", WrapAllFrames)
-	end
 end
+
+-- CVars are only reliable from PLAYER_LOGIN on (account settings load late).
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("PLAYER_LOGIN")
+frame:SetScript("OnEvent", function()
+	if Amity.loaded.chattime and db then
+		Apply()
+	elseif Amity.db then
+		Restore(Amity.db.chattime)
+	end
+end)

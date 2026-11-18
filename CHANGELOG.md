@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.4] - 2026-11-18
+
+Changes:
+
+- **Chat Timestamps**: fixed a flood of "attempted to iterate a table that cannot be accessed while tainted (execution tainted by 'Amity')" errors, mostly in battlegrounds like Alterac Valley. The module now uses Blizzard's own chat timestamp setting (Options > Social) and takes it over while it is on. When you switch the module off, your previous setting comes back at the next login. The 12 hour formats now show a leading zero, e.g. `02:17 PM`.
+
 ## [1.0.3] - 2026-11-16
 
 Changes:
